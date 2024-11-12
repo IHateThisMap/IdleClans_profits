@@ -71,11 +71,12 @@ fruits_list = ["all"] + list(fruits_dict.keys())
 argument_options = (("Farm ", fruits_list), 
                     ("with ", range(0, 50), f"% active boost"), 
                     ("and with ", [10 * i for i in range(0, 5)], f"% chance to save the seeds"), 
-                    ("and ", ["use previously queried and saved prices", "use API"]))
+                    ("and ", ["use API", "use previously queried and saved prices"]))
         
 if __name__ == '__main__':
-    product, active_boost, change_to_save_materials, use_API = run_command_handler(argument_options, sys.argv)
+    product, active_boost, change_to_save_materials, use_API = run_command_handler(argument_options)
     #product, active_boost, change_to_save_materials, use_API = "potato", 32, 20, "use API"
+    print(f"product: \"{product}\", active_boost: \"{active_boost}\", change_to_save_materials: \"{change_to_save_materials}\", use_API: \"{use_API}\"")
 
     use_API_bool = use_API == "use API"
     if not use_API_bool:
