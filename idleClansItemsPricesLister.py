@@ -1,6 +1,6 @@
 import requests
 import helpers
-from helpers import print_timer_line, ask_if
+from helpers import ask_if, get_price_info
 
 # put information of a sell offer of some item here, and the script will notify about it if it is found from some item IDs queried price informations. And this way you can try and find out a id of some specific item quite easily.
 to_search_dict = {              # price         amount
@@ -50,22 +50,6 @@ for id_range in not_used_id_ranges:
 
 known_id_item_pairs_dict = helpers.id_item_dict
 
-def get_price_info(id):
-    url = f'https://query.idleclans.com/api/PlayerMarket/items/prices/latest/comprehensive/{id}'
-
-    try:
-        response = requests.get(url)
-
-        if response.status_code == 200:
-            posts = response.json()
-            return posts
-        else:
-            print('Error:', response.status_code)
-            return None
-    except requests.exceptions.RequestException as e:
-        print('Error:', e)
-        return None
-
 def main(start_id = 0, amount_to_check = 3):
     already_found_id_list = list(known_id_item_pairs_dict.keys())
     end_id = start_id + amount_to_check
@@ -77,7 +61,6 @@ def main(start_id = 0, amount_to_check = 3):
         first_of_not_used_id = -1
         while (cur_id in already_found_id_list) or (cur_id in not_used_id_list):
             if cur_id in already_found_id_list:
-                #print("\033[1;34mID: " + str(cur_id) + "\033[1;90m(already found)")
                 #print(f"\n\033[1;34m{known_id_item_pairs_dict[cur_id]} (ID {cur_id}) already found", end = "")
                 if first_of_already_found_id == -1:
                     first_of_not_used_id = -1
@@ -85,9 +68,7 @@ def main(start_id = 0, amount_to_check = 3):
                     print(f"\n\033[1;34mID {cur_id} already found ({known_id_item_pairs_dict[cur_id]})", end = "")
                 else:
                     print(f"\n\033[F\033[1;34mIDs {first_of_already_found_id}-{cur_id} already found (" + "|".join([known_id_item_pairs_dict[i] for i in range(first_of_already_found_id, cur_id+1)]) + ")", end = "")
-
             else:
-                #print(f"\n\033[1;90mID {cur_id} not used", end = "")
                 if first_of_not_used_id == -1:
                     first_of_already_found_id = -1
                     first_of_not_used_id = cur_id
@@ -104,16 +85,9 @@ def main(start_id = 0, amount_to_check = 3):
 
         print("\033[1;37m\n" + str(cur_id))
         for search_item in to_search_dict:
-            #print("\033[1;90m ", end = "")
-            #print("search_item: "+search_item)
-            #print("to_search_dict[search_item]: " + str(to_search_dict[search_item]))
             if to_search_dict[search_item] in price_info['lowestSellPricesWithVolume']:
                 print("\033[1;32mFOUND: "+search_item)
-                #print("\033[1;32m ", end = "")
                 break
-            #else:
-            #    print("\033[1;37m", end = "")
-
 
         if price_info:
             print('lowestSellPricesWithVolume:', price_info['lowestSellPricesWithVolume'])
@@ -134,9 +108,8 @@ def main(start_id = 0, amount_to_check = 3):
         else:
             print('Failed to fetch posts from API.')
 
-    print_timer_line("can do queries again in ", 60, "seconds")
-    if ask_if(f"query 30 next IDs starting from ID {cur_id+1} ?"):
-            main(cur_id+1)
+    if ask_if(f"query {amount_to_check} next IDs starting from ID {cur_id+1} ?"):
+            main(cur_id+1, amount_to_check)
 
 if __name__ == '__main__':
     main()
