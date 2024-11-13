@@ -103,7 +103,8 @@ def get_price_info(id):
 
             if response.status_code == 200:
                 posts = response.json()
-                if id in id_item_dict: save_system.update_price_infos_in_memory(posts)
+                if id in id_item_dict: 
+                    save_system.update_price_infos_in_memory(posts)   #TODO maybe prompt to save or not IF there happens to not be sale or buy offers in this object!!!
                 return posts
             elif response.status_code == 429:
                 print('\033[1;33mError: Too many requests to API in minute!')
@@ -124,6 +125,8 @@ def get_profit_per_hour(materials_price, product_price, sec_per_product, active_
 def get_price_with_good_quantity(price_info, x_PricesWithVolume, required_amount_in_gold = 50000):
     price_counter = 0
     amount_counter = 0
+    if len(price_info[x_PricesWithVolume]) == 0:
+        return -1
     for listing in price_info[x_PricesWithVolume]:
         _amount = int(listing['key'])
         _price  = int(listing['value'])
