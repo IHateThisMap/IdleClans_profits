@@ -16,8 +16,14 @@ fruits_dict = {         # sec_per_5_fruits
     "Dragon fruit" :     180
 }
 
+def print_fruit_profits_line(starting_text, fruit_price, seed_price, print_5_fruits_price=True, detail_text_positioning=113, fill_char=" "):
+    five_fruits_price_str = f"({round(fruit_price*5):,}g /5_fruits)" 
+    if not print_5_fruits_price: five_fruits_price_str = "".ljust(len(five_fruits_price_str), fill_char)
+    print(starting_text.ljust(detail_text_positioning, fill_char) + 
+          f" ({round(fruit_price):,}g /fruit) {five_fruits_price_str} ({round(seed_price):,}g /seed)")
+
 def main(cur_fruit, active_boost, change_to_save_materials):
-    print(f"..................{cur_fruit.upper()}..................")
+    print(f"..................{cur_fruit.upper()}..................".ljust(140, "."))
     fruit_price_info = get_price_info(get_item_id(cur_fruit))
     seed_price_info =  get_price_info(get_item_id(cur_fruit + " seed"))
 
@@ -25,26 +31,33 @@ def main(cur_fruit, active_boost, change_to_save_materials):
     selling_seed_price = get_price_with_good_quantity(seed_price_info, 'lowestSellPricesWithVolume')
     buying_fruit_price = get_price_with_good_quantity(fruit_price_info, 'highestBuyPricesWithVolume')
     min_profit_per_hour = get_profit_per_hour(selling_seed_price, buying_fruit_price*5, fruits_dict[cur_fruit], active_boost, change_to_save_materials)
-    print(f"\033[1;90m(min_profit_per_hour \033[1;37m{min_profit_per_hour:,}\033[1;90m for instant buying and selling prices) ({buying_fruit_price}g/fruit) ({buying_fruit_price*5}g/5fruits) ({selling_seed_price}/seed)")
+    print_fruit_profits_line(f"\033[1;90m(min_profit_per_hour \033[1;37m{min_profit_per_hour:,}\033[1;90m for instantly buying seeds and instantly selling fruits) ",
+                             buying_fruit_price, selling_seed_price, fill_char="-")
+
 
     avg_profit_per_hour_1Day = get_profit_per_hour(seed_price_info['averagePrice1Day'], fruit_price_info['averagePrice1Day']*5, fruits_dict[cur_fruit], active_boost, change_to_save_materials)
-    print(f"\033[1;90m(avg_profit_per_hour_1Day   \033[1;33m{avg_profit_per_hour_1Day:,}\033[1;90m)")
+    print_fruit_profits_line(f"\033[1;90m(avg_profit_per_hour_1Day   \033[1;33m{avg_profit_per_hour_1Day:,}\033[1;90m) ",
+                             fruit_price_info['averagePrice1Day'], seed_price_info['averagePrice1Day'], print_5_fruits_price=False)
+    
     avg_profit_per_hour_7Days = get_profit_per_hour(seed_price_info['averagePrice7Days'], fruit_price_info['averagePrice7Days']*5, fruits_dict[cur_fruit], active_boost, change_to_save_materials)
-    print(f"\033[1;90m(avg_profit_per_hour_7Days  \033[1;33m{avg_profit_per_hour_7Days:,}\033[1;90m)")
-    avg_profit_per_hour_30Days = get_profit_per_hour(seed_price_info['averagePrice30Days'], fruit_price_info['averagePrice30Days']*5, fruits_dict[cur_fruit], active_boost, change_to_save_materials)
-    print(f"\033[1;90m(avg_profit_per_hour_30Days \033[1;33m{avg_profit_per_hour_30Days:,}\033[1;90m)")
+    print_fruit_profits_line(f"\033[1;90m(avg_profit_per_hour_7Days   \033[1;33m{avg_profit_per_hour_7Days:,}\033[1;90m) ",
+                             fruit_price_info['averagePrice7Days'], seed_price_info['averagePrice7Days'], print_5_fruits_price=False, fill_char="-")
 
-    #buying_seed_price = seed_price_info['highestBuyPricesWithVolume'][0]['key']
-    #selling_fruit_price = fruit_price_info['lowestSellPricesWithVolume'][0]['key']
+    avg_profit_per_hour_30Days = get_profit_per_hour(seed_price_info['averagePrice30Days'], fruit_price_info['averagePrice30Days']*5, fruits_dict[cur_fruit], active_boost, change_to_save_materials)
+    print_fruit_profits_line(f"\033[1;90m(avg_profit_per_hour_30Days   \033[1;33m{avg_profit_per_hour_30Days:,}\033[1;90m) ",
+                             fruit_price_info['averagePrice30Days'], seed_price_info['averagePrice30Days'], print_5_fruits_price=False)
+
+
     buying_seed_price = get_price_with_good_quantity(seed_price_info, 'highestBuyPricesWithVolume', 10000)
     selling_fruit_price = get_price_with_good_quantity(fruit_price_info, 'lowestSellPricesWithVolume', 10000)
     max_profit_per_hour = get_profit_per_hour(buying_seed_price, selling_fruit_price*5, fruits_dict[cur_fruit], active_boost, change_to_save_materials)
-    print(f"\033[1;90m(max_profit_per_hour \033[1;32m{max_profit_per_hour:,}\033[1;90m for slow buying and selling listings) ({selling_fruit_price}g/fruit) ({selling_fruit_price*5}g/5fruits) ({buying_seed_price}/seed)")
+    print_fruit_profits_line(f"\033[1;90m(max_profit_per_hour \033[1;32m{max_profit_per_hour:,}\033[1;90m for slowly buying seeds and selling fruits throughg listings) ",
+                             selling_fruit_price, buying_seed_price, fill_char="-")
 
 fruits_list = ["all"] + list(fruits_dict.keys())
 argument_options = (("Farm ", fruits_list), 
                     ("with ", range(0, 50), f"% active boost"), 
-                    ("and with ", [10 * i for i in range(0, 5)], f"% chance to save the seeds"), 
+                    ("and with ", [10 * i for i in range(0, 6)], f"% chance to save the seeds"), 
                     ("and ", ["use API", "use previously queried and saved prices"]))
         
 if __name__ == '__main__':
