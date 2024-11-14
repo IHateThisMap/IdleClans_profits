@@ -1,6 +1,5 @@
 import requests
 import time
-#from helpers import _print_timer_line, id_item_dict
 import save_system
 
 id_item_dict = {
@@ -103,8 +102,12 @@ def get_price_info(id):
 
             if response.status_code == 200:
                 posts = response.json()
-                if id in id_item_dict: 
-                    save_system.update_price_infos_in_memory(posts)   #TODO maybe prompt to save or not IF there happens to not be sale or buy offers in this object!!!
+                if id in id_item_dict:
+                    if _check_offers_from_price_info(id_item_dict[id], posts):
+                        save_system.update_price_info_in_save_file(posts)
+                    else:
+                        print(f"\033[1;90m(skipped saving price info of {id_item_dict[id]} to save file)\033[1;37m")
+                        save_system.update_price_info_only_in_current_session(posts)
                 return posts
             elif response.status_code == 429:
                 print('\033[1;33mError: Too many requests to API in minute!')
@@ -116,9 +119,25 @@ def get_price_info(id):
             print('\033[1;33mError:', e)
             return None
 
-def get_profit_per_hour(materials_price, product_price, sec_per_product, active_boost, change_to_save_materials=10):
+def _check_offers_from_price_info(item_name, price_info, price_types=('lowestSellPricesWithVolume', 'highestBuyPricesWithVolume')):
+    found_types_of_orders = []
+    for price_type in price_types:
+        if len(price_info[price_type]) == 0:
+            _buy_or_sell = "buy" if ("Buy" in price_type) else "sell"
+            print(f"\033[1;37mThere is 0 {_buy_or_sell} offers for {item_name}.\033[1;33m You may be able to do good deals with {_buy_or_sell}ing this item right now!!\033[1;37m")
+            found_types_of_orders.append(False)
+        found_types_of_orders.append(True)
+    return False not in found_types_of_orders
+
+def get_profit_per_hour(materials_price, product_price, sec_per_product, active_boost, change_to_save_materials):
+    if materials_price == -1 and product_price == -1:
+        return "???"
     products_per_hour = 3600/sec_per_product * (100+active_boost)/100
+    if materials_price == -1:
+         return f"(({product_price}-materials_price)*{round(products_per_hour)})"
     _materials_price = materials_price * (100-change_to_save_materials)/100
+    if product_price == -1:
+         return f"((product_price-{round(_materials_price)})*{round(products_per_hour)})"
     profit_per_product = product_price - _materials_price
     return round(profit_per_product * products_per_hour)
 
@@ -162,3 +181,13 @@ def print_timer_line(lineStart, retry_timer, line_end):
         retry_timer -= 0.1
         if retry_timer < 0: retry_timer=0
         print(f"\033[A{lineStart}{round(retry_timer, 1)}{line_end}")
+
+def prepare_profit_variables_for_printing(variables_list):
+    '''this will apply ":," to the numberic values, and avoids problems when some value happens to be strings instead '''
+    str_variables = []
+    for variable in variables_list:
+        if str(variable).lstrip("-").isdigit():
+            str_variables.append(f"{int(variable):,}")
+        else:
+            str_variables.append(str(variable))
+    return str_variables

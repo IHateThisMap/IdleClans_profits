@@ -4,7 +4,13 @@ import os
 SAVE_FOLDER = "save_folder/"
 price_infos_in_memory_dict = {}
 
-def update_price_infos_in_memory(posts):
+def update_price_info_only_in_current_session(posts):
+    '''will not touch to the save files at all, but only makes the script remember this price info until it has finished running'''
+    global price_infos_in_memory_dict
+    id = posts["itemId"]
+    price_infos_in_memory_dict[id] = posts
+
+def update_price_info_in_save_file(posts):
     ''' will not overwrite the possibly existing save file, just adds to it or updates element in it '''
     global price_infos_in_memory_dict
     save_file_name = "icPriceInfo.dictionary"
