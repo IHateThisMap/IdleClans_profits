@@ -186,8 +186,26 @@ def prepare_profit_variables_for_printing(variables_list):
     '''this will apply ":," to the numberic values, and avoids problems when some value happens to be strings instead '''
     str_variables = []
     for variable in variables_list:
-        if str(variable).lstrip("-").isdigit():
-            str_variables.append(f"{int(variable):,}")
-        else:
-            str_variables.append(str(variable))
+        str_variable = str(variable)  if  (not str(variable).lstrip("-").isdigit())  else  f"{int(variable):,}"
+        str_variables.append(str_variable.removesuffix(".0"))
     return str_variables
+
+def adjust_parts_of_lines(fragmented_lines_list, separator=" | "):
+    fragment_len_list = []
+    for fragmented_line in fragmented_lines_list:
+        for i in range(len(fragmented_line)):
+            if (len(fragment_len_list) < i+1):
+                fragment_len_list.append(len(fragmented_line[i]))
+            elif fragment_len_list[i] < len(fragmented_line[i]):
+                fragment_len_list[i] = len(fragmented_line[i])
+    
+    result_lines_list = []
+    adjusted_fragment_lines_list = [[] for _ in fragmented_lines_list]
+    line_counter = 0
+    for fragmented_line in fragmented_lines_list:
+        for i in range(len(fragmented_line)):
+            adjusted_fragment_lines_list[line_counter].append(fragmented_line[i].ljust(fragment_len_list[i]))
+        result_lines_list.append(separator.join(adjusted_fragment_lines_list[line_counter]))
+        line_counter += 1
+
+    return result_lines_list

@@ -1,5 +1,5 @@
 import sys
-from helpers import get_item_id, get_price_info, get_profit_per_hour, get_price_with_good_quantity, prepare_profit_variables_for_printing
+from helpers import get_item_id, get_price_info, get_profit_per_hour, get_price_with_good_quantity, prepare_profit_variables_for_printing, adjust_parts_of_lines
 from save_system import load_price_infos_from_save, load_arguments_from_save, save_arguments_to_file
 sys.path.append('../py_script_launcher_UI/')
 from UI import run_command_handler
@@ -33,17 +33,19 @@ def get_prices_and_profits(cur_product, material_price_type, product_price_type,
     profit_per_hour = get_profit_per_hour(total_material_price, product_price, products_dict[cur_product][1], active_boost, change_to_save_materials)
     if product_price == -1:         product_price = "???"
     if total_material_price == -1:  total_material_price = "???"
-
     return prepare_profit_variables_for_printing((profit_per_hour, product_price, total_material_price))
 
 def main(cur_product, active_boost=0, change_to_save_materials=0):
     print(f"\n..................{cur_product.upper()}..................")
 
     min_profit_per_hour, buying_product_price, total_selling_material_price = get_prices_and_profits(cur_product, 'lowestSellPricesWithVolume', 'highestBuyPricesWithVolume', active_boost, change_to_save_materials)
-    print(f"\033[1;90m(min_profit_per_hour \033[1;37m{min_profit_per_hour}\033[1;90m for instant buying and selling prices) ({buying_product_price}g/product) ({total_selling_material_price}g/materials)\033[1;37m")
-
     max_profit_per_hour, selling_product_price, total_buying_material_price = get_prices_and_profits(cur_product, 'highestBuyPricesWithVolume', 'lowestSellPricesWithVolume', active_boost, change_to_save_materials)
-    print(f"\033[1;90m(max_profit_per_hour \033[1;32m{max_profit_per_hour}\033[1;90m for slow buying and selling listings) ({selling_product_price}g/product) ({total_buying_material_price}g/materials)\033[1;37m")
+
+    lines = adjust_parts_of_lines(((f"\033[1;90mMIN estimated profit \033[1;37m{min_profit_per_hour}\033[1;90m g/h for instant buying and selling prices.", f"{buying_product_price} g/product",  f"{total_selling_material_price} g/materials\033[1;37m"), 
+                                   (f"\033[1;90mMAX estimated profit \033[1;32m{max_profit_per_hour}\033[1;90m g/h for slow buying and selling listings.",  f"{selling_product_price} g/product", f"{total_buying_material_price} g/materials\033[1;37m")))
+    for l in lines:
+        print(l)
+
 
 products_list = ["all"] + list(products_dict.keys())
 #products_list = ["all", "potions", "metals", "farming"] + list(products_dict.keys())
