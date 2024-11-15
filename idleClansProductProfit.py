@@ -1,5 +1,6 @@
+import signal_handling
 import sys
-from helpers import get_item_id, get_price_info, get_profit_per_hour, get_price_with_good_quantity, prepare_profit_variables_for_printing, adjust_parts_of_lines
+from helpers import get_item_id, get_price_info, calculate_profit_per_hour, calculate_price_with_good_quantity, prepare_profit_variables_for_printing, adjust_parts_of_lines
 from save_system import load_price_infos_from_save, load_arguments_from_save, save_arguments_to_file
 sys.path.append('../py_script_launcher_UI/')
 from UI import run_command_handler
@@ -17,20 +18,23 @@ products_dict = {         #      (amount, material)                             
     "Potion of pure power" :   ( ((15, "papaya"    ), (20, "Seaweed"       ), (2, "Magical log" )),      155   )
 }
 
+def _get_price_info(id, retry_time=60):
+    return get_price_info(id, retry_time=retry_time, exit_if_interrupted=signal_handling.exit_if_interrupted)
+
 def get_prices_and_profits(cur_product, material_price_type, product_price_type, active_boost, change_to_save_materials):
     total_material_price = 0
     for material in products_dict[cur_product][0]:
-        material_price_info = get_price_info(get_item_id(material[1]))
-        selling_material_price = get_price_with_good_quantity(material_price_info, material_price_type)
+        material_price_info = _get_price_info(get_item_id(material[1]))
+        selling_material_price = calculate_price_with_good_quantity(material_price_info, material_price_type)
         if selling_material_price != -1  and  total_material_price != -1:
             total_material_price += selling_material_price * material[0]
         else:
             total_material_price = -1
 
-    product_price_info = get_price_info(get_item_id(cur_product))
-    product_price = get_price_with_good_quantity(product_price_info, product_price_type)
+    product_price_info = _get_price_info(get_item_id(cur_product))
+    product_price = calculate_price_with_good_quantity(product_price_info, product_price_type)
 
-    profit_per_hour = get_profit_per_hour(total_material_price, product_price, products_dict[cur_product][1], active_boost, change_to_save_materials)
+    profit_per_hour = calculate_profit_per_hour(total_material_price, product_price, products_dict[cur_product][1], active_boost, change_to_save_materials)
     if product_price == -1:         product_price = "???"
     if total_material_price == -1:  total_material_price = "???"
     return prepare_profit_variables_for_printing((profit_per_hour, product_price, total_material_price))
@@ -70,7 +74,9 @@ if __name__ == '__main__':
         load_price_infos_from_save()
 
     if product == "all":
-        for cur_fruit in products_dict:
-            main(cur_fruit, active_boost, change_to_save_materials)
+        signal_handling.setup_sigint_handler("")
+        for cur_product in products_dict:
+            signal_handling.exit_if_interrupted()
+            main(cur_product, active_boost, change_to_save_materials)
     else:
         main(product, active_boost, change_to_save_materials)

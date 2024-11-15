@@ -1,5 +1,6 @@
 import signal_handling
 from helpers import ask_if, get_price_info, print_timer_line, is_id_known, get_item_name
+import sys
 
 # put information of a sell offer of some item here, and the script will notify about it if it is found from some item IDs queried price informations. And this way you can try and find out a id of some specific item quite easily.
 to_search_dict = {              # price         amount
@@ -49,6 +50,9 @@ not_used_id_list = [3,
 for id_range in not_used_id_ranges:
      not_used_id_list += range(id_range[0], id_range[1]+1)
 
+def _get_price_info(id, retry_time=60):
+    return get_price_info(id, retry_time=retry_time, exit_if_interrupted=signal_handling.exit_if_interrupted)
+
 def main(start_id, amount_to_check):
     skip_id_count = 0
     api_call_count = 0
@@ -90,7 +94,7 @@ def main(start_id, amount_to_check):
             before_checked_id_print = "\033[1;90m,\033[1;37m "
 
         api_call_count += 1
-        price_info = get_price_info(cur_id)
+        price_info = _get_price_info(cur_id)
 
         for search_item in to_search_dict:
             if to_search_dict[search_item] in price_info['lowestSellPricesWithVolume']:
@@ -108,11 +112,11 @@ def main(start_id, amount_to_check):
     if ask_if(f"query {amount_to_check} next IDs starting from ID {cur_id+1} ?"):
         main(cur_id+1, amount_to_check)
 
-    #print_timer_line("lets wait ", 120, "seconds, and check the next " + str(amount_to_check) + " IDs")
+    #print_timer_line("lets wait ", 120, "seconds, and check the next " + str(amount_to_check) + " IDs", signal_handling.exit_if_interrupted)
     #main(cur_id+1, amount_to_check)
 
 
 if __name__ == '__main__':
-    import sys
+    signal_handling.setup_sigint_handler()
     argument = int(sys.argv[1])  if  len(sys.argv)>1 and (sys.argv[1].isdigit())  else  0
     main(argument, 40)

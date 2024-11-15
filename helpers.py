@@ -105,13 +105,16 @@ def get_item_name(item_id):
 def is_id_known(id):
     return (id in list(_id_item_dict.keys()))
 
-def get_price_info(id, retry_time = 60):
+def get_price_info(id, retry_time, exit_if_interrupted = None):
     ''' If save has been loaded and price info for that id can be found from it, returns that.
         Othervise does a new API call for that id, and returns it. (this saves/updates it into the save file even if the save is not loaded) '''
     price_info = save_system.get_price_info_from_currently_loaded_price_infos(id)
     if price_info != None:
         return price_info
     else:
+        #Might be better to not do any more API calls if interruption is signaled
+        #if exit_if_interrupted != None: exit_if_interrupted()
+
         url = f'https://query.idleclans.com/api/PlayerMarket/items/prices/latest/comprehensive/{id}'
         try:
             response = requests.get(url)
@@ -126,9 +129,11 @@ def get_price_info(id, retry_time = 60):
                         save_system.update_price_info_only_in_current_session(posts)
                 return posts
             elif response.status_code == 429:
-                print('\033[1;33mError: Too many requests to API in minute!')
-                print_timer_line("lets wait ", retry_time, "seconds, and try again.")
-                return get_price_info(id, 10)
+                print('\n\033[1;33mError: Too many requests to API in a minute! (the limit is 40)')
+                print_timer_line("lets wait ", retry_time, "seconds, and try again.", exit_if_interrupted)
+                if retry_time > 10:
+                    retry_time = 10
+                return get_price_info(id, retry_time, exit_if_interrupted)
             else:
                 print('\033[1;33mError:', response.status_code)
         except requests.exceptions.RequestException as e:
@@ -145,7 +150,7 @@ def _check_offers_from_price_info(item_name, price_info, price_types=('lowestSel
         found_types_of_orders.append(True)
     return False not in found_types_of_orders
 
-def get_profit_per_hour(materials_price, product_price, sec_per_product, active_boost, change_to_save_materials):
+def calculate_profit_per_hour(materials_price, product_price, sec_per_product, active_boost, change_to_save_materials):
     if materials_price == -1 and product_price == -1:
         return "???"
     products_per_hour = 3600/sec_per_product * (100+active_boost)/100
@@ -157,7 +162,7 @@ def get_profit_per_hour(materials_price, product_price, sec_per_product, active_
     profit_per_product = product_price - _materials_price
     return round(profit_per_product * products_per_hour)
 
-def get_price_with_good_quantity(price_info, x_PricesWithVolume, required_amount_in_gold = 50000):
+def calculate_price_with_good_quantity(price_info, x_PricesWithVolume, required_amount_in_gold = 50000):
     price_counter = 0
     amount_counter = 0
     if len(price_info[x_PricesWithVolume]) == 0:
@@ -190,13 +195,13 @@ def ask_if(question):
 		elif answer == "n":
 			return False
 
-def print_timer_line(lineStart, retry_timer, line_end):
-    print()
+def print_timer_line(lineStart, retry_timer, line_end, exit_if_interrupted=None):
     while retry_timer > 0:
+        if exit_if_interrupted != None: exit_if_interrupted()
         time.sleep(0.1)
         retry_timer -= 0.1
         if retry_timer < 0: retry_timer=0
-        print(f"\033[A{lineStart}{round(retry_timer, 1)}{line_end}")
+        print(f"\033[1;37m{lineStart}{round(retry_timer, 1)}{line_end}  ", end="\r", flush=True)
 
 def prepare_profit_variables_for_printing(variables_list):
     '''this will apply ":," to the numberic values, and avoids problems when some value happens to be strings instead '''
