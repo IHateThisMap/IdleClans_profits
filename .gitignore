@@ -5,3 +5,4 @@ save_folder/icFarmingArguments.list
 save_folder/icPotionsandbarsArguments.list
 save_folder/icPriceInfo.dictionary
 __pycache__/signal_handling.cpython-39.pyc
+__pycache__/io_helpers.cpython-39.pyc

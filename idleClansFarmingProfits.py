@@ -1,6 +1,7 @@
 import signal_handling
 import sys
-from helpers import get_item_id, get_price_info, calculate_profit_per_hour, calculate_price_with_good_quantity, adjust_parts_of_lines
+from io_helpers import adjust_parts_of_lines
+from helpers import get_item_id, get_price_info, calculate_profit_per_hour, calculate_price_with_good_quantity
 from save_system import load_price_infos_from_save, load_arguments_from_save, save_arguments_to_file
 sys.path.append('../py_script_launcher_UI/')
 from UI import run_command_handler

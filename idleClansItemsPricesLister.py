@@ -1,5 +1,6 @@
 import signal_handling
-from helpers import ask_if, get_price_info, print_timer_line, is_id_known, get_item_name
+from io_helpers import ask_if, print_timer_line
+from helpers import get_price_info, is_id_known, get_item_name
 import sys
 
 # put information of a sell offer of some item here, and the script will notify about it if it is found from some item IDs queried price informations. And this way you can try and find out a id of some specific item quite easily.
