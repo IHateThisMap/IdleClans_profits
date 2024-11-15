@@ -1,9 +1,10 @@
-import requests
-import helpers
-from helpers import ask_if, get_price_info
+import signal_handling
+from helpers import ask_if, get_price_info, print_timer_line, is_id_known, get_item_name
 
 # put information of a sell offer of some item here, and the script will notify about it if it is found from some item IDs queried price informations. And this way you can try and find out a id of some specific item quite easily.
 to_search_dict = {              # price         amount
+    #"Titanium boots" :          {'key': 78999, 'value': 5.0},
+    #"Titanium gloves" :         {'key': 100000, 'value': 8.0}
     #"Raw superior meat" :      {'key': 640, 'value': 1748.0},
     #"Onion" :                  {'key': 166, 'value': 3708.0},
     #"Nettle" :                 {'key': 149, 'value': 611230.0}#,
@@ -48,68 +49,70 @@ not_used_id_list = [3,
 for id_range in not_used_id_ranges:
      not_used_id_list += range(id_range[0], id_range[1]+1)
 
-known_id_item_pairs_dict = helpers.id_item_dict
-
-def main(start_id = 0, amount_to_check = 3):
-    already_found_id_list = list(known_id_item_pairs_dict.keys())
-    end_id = start_id + amount_to_check
+def main(start_id, amount_to_check):
     skip_id_count = 0
-    for current_id in range(start_id, end_id):
-        cur_id = current_id + skip_id_count
-        _skipped = False
-        first_of_already_found_id = -1
-        first_of_not_used_id = -1
-        while (cur_id in already_found_id_list) or (cur_id in not_used_id_list):
-            if cur_id in already_found_id_list:
-                #print(f"\n\033[1;34m{known_id_item_pairs_dict[cur_id]} (ID {cur_id}) already found", end = "")
+    api_call_count = 0
+    starting_id_checking = True
+    while api_call_count < amount_to_check:
+        signal_handling.exit_if_interrupted()
+        cur_id = start_id + api_call_count + skip_id_count
+
+        while(True):
+            first_of_already_found_id = -1
+            while is_id_known(cur_id):
                 if first_of_already_found_id == -1:
-                    first_of_not_used_id = -1
                     first_of_already_found_id = cur_id
-                    print(f"\n\033[1;34mID {cur_id} already found ({known_id_item_pairs_dict[cur_id]})", end = "")
+                    print(f"\n\033[1;34mID {cur_id} already found ({get_item_name(cur_id)})\033[1;37m", end = "")
                 else:
-                    print(f"\n\033[F\033[1;34mIDs {first_of_already_found_id}-{cur_id} already found (" + "|".join([known_id_item_pairs_dict[i] for i in range(first_of_already_found_id, cur_id+1)]) + ")", end = "")
-            else:
+                    print(f"\n\033[F\033[1;34mIDs {first_of_already_found_id}-{cur_id} already found (" + "|".join([get_item_name(i) for i in range(first_of_already_found_id, cur_id+1)]) + ")", end = "")
+                skip_id_count += 1
+                cur_id = start_id + api_call_count + skip_id_count
+
+            first_of_not_used_id = -1
+            while (cur_id in not_used_id_list):
                 if first_of_not_used_id == -1:
-                    first_of_already_found_id = -1
                     first_of_not_used_id = cur_id
                     print(f"\n\033[1;90mID {cur_id} not used", end = "")
                 else:
                     print(f"\n\033[F\033[1;90mIDs {first_of_not_used_id}-{cur_id} not used", end = "")
-            skip_id_count += 1
-            cur_id = current_id + skip_id_count
-            _skipped = True
-        if _skipped:
-            print()
+                skip_id_count += 1
+                cur_id = start_id + api_call_count + skip_id_count
+            
+            _some_api_calls_skipped_now = (first_of_already_found_id != -1) or (first_of_not_used_id != -1)
+            if not _some_api_calls_skipped_now:
+                break
+            else:
+                starting_id_checking = True
 
+        if starting_id_checking:
+            before_checked_id_print = "\n\033[1;37mChecking IDs: "
+        else:
+            before_checked_id_print = "\033[1;90m,\033[1;37m "
+
+        api_call_count += 1
         price_info = get_price_info(cur_id)
 
-        print("\033[1;37m\n" + str(cur_id))
         for search_item in to_search_dict:
             if to_search_dict[search_item] in price_info['lowestSellPricesWithVolume']:
-                print("\033[1;32mFOUND: "+search_item)
+                checked_id_print = f"\n\033[1;32m{cur_id} FOUND: {search_item}\033[1;90m (manually check that it is not a false-positive, and add to helpers.py -> _id_item_dict):\n " + str(price_info)
+                starting_id_checking = True
                 break
-
-        if price_info:
-            print('lowestSellPricesWithVolume:', price_info['lowestSellPricesWithVolume'])
-            print('highestBuyPricesWithVolume:', price_info['highestBuyPricesWithVolume'])
-            print('averagePrice1Day:', price_info['averagePrice1Day'])
-        
-            if price_info['averagePrice7Days'] > 10000000:
-                print("\033[1;91m", end = "")
-            print('averagePrice7Days:', price_info['averagePrice7Days'])
-            print("\033[1;37m", end = "")
-
-            print('averagePrice30Days:', price_info['averagePrice30Days'])
-
-            if price_info['tradeVolume1Day'] > 500000:
-                print("\033[1;91m", end = "")
-            print('tradeVolume1Day:', price_info['tradeVolume1Day'])
-            print("\033[1;37m", end = "")
         else:
-            print('Failed to fetch posts from API.')
+            checked_id_print = "\033[1;37m" + str(cur_id)
+            starting_id_checking = False
+
+        print(before_checked_id_print + checked_id_print, flush=True, end="")
+
+    print()
 
     if ask_if(f"query {amount_to_check} next IDs starting from ID {cur_id+1} ?"):
-            main(cur_id+1, amount_to_check)
+        main(cur_id+1, amount_to_check)
+
+    #print_timer_line("lets wait ", 120, "seconds, and check the next " + str(amount_to_check) + " IDs")
+    #main(cur_id+1, amount_to_check)
+
 
 if __name__ == '__main__':
-    main()
+    import sys
+    argument = int(sys.argv[1])  if  len(sys.argv)>1 and (sys.argv[1].isdigit())  else  0
+    main(argument, 40)

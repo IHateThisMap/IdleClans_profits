@@ -2,7 +2,7 @@ import requests
 import time
 import save_system
 
-id_item_dict = {
+_id_item_dict = {
     0	: "Spurce log",
     1	: "Pine log",
     2	: "Chestnut log",
@@ -16,6 +16,10 @@ id_item_dict = {
     42	: "Titanium ore",
     46	: "Titanium bar",
     54	: "Normal hatchet",
+    87	: "Titanium platebody",
+    88	: "Titanium platelegs",
+    89	: "Titanium helmet",
+    90	: "Titanium shield",
     113	: "Raw superior meat",
     118	: "Nettle",
     122	: "Blueberry",
@@ -47,6 +51,8 @@ id_item_dict = {
     228	: "Superior gemstone",
     229	: "Outstanding gemstone",
     230	: "Godlike gemstone",
+    236	: "Titanium boots",
+    243	: "Titanium gloves",
     248	: "Red leather",
     265	: "Titanium arrow",
     266	: "Astronomical arrow",
@@ -81,15 +87,25 @@ id_item_dict = {
     787	: "Otherworldly gemstone"
 }
 def get_item_id(item_name):
-    _id_list = [_id for _id, _val in id_item_dict.items() if _val == item_name.capitalize()]
+    _id_list = [_id for _id, _val in _id_item_dict.items() if _val == item_name.capitalize()]
     if len(_id_list) == 1:
         return _id_list[0]
     else:
         print(f"Something went wrong with get_item_id(\"{item_name}\")")
-        print(f"Please make sure that there is no typo in \"{item_name}\", and that it has been added to id_item_dict")
+        print(f"Please make sure that there is no typo in \"{item_name}\", and that it has been added to _id_item_dict")
         exit()
 
-def get_price_info(id):
+def get_item_name(item_id):
+    if is_id_known(item_id):
+        return _id_item_dict[item_id]
+    else:
+        print("Error! Tried to get name for non existing id: " + str(item_id))
+        exit()
+
+def is_id_known(id):
+    return (id in list(_id_item_dict.keys()))
+
+def get_price_info(id, retry_time = 60):
     ''' If save has been loaded and price info for that id can be found from it, returns that.
         Othervise does a new API call for that id, and returns it. (this saves/updates it into the save file even if the save is not loaded) '''
     price_info = save_system.get_price_info_from_currently_loaded_price_infos(id)
@@ -102,17 +118,17 @@ def get_price_info(id):
 
             if response.status_code == 200:
                 posts = response.json()
-                if id in id_item_dict:
-                    if _check_offers_from_price_info(id_item_dict[id], posts):
+                if id in _id_item_dict:
+                    if _check_offers_from_price_info(_id_item_dict[id], posts):
                         save_system.update_price_info_in_save_file(posts)
                     else:
-                        print(f"\033[1;90m(skipped saving price info of {id_item_dict[id]} to save file)\033[1;37m")
+                        print(f"\033[1;90m(skipped saving price info of {_id_item_dict[id]} to save file)\033[1;37m")
                         save_system.update_price_info_only_in_current_session(posts)
                 return posts
             elif response.status_code == 429:
                 print('\033[1;33mError: Too many requests to API in minute!')
-                print_timer_line("lets wait ", 60, "seconds, and try again.")
-                return get_price_info(id)
+                print_timer_line("lets wait ", retry_time, "seconds, and try again.")
+                return get_price_info(id, 10)
             else:
                 print('\033[1;33mError:', response.status_code)
         except requests.exceptions.RequestException as e:
