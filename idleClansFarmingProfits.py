@@ -1,10 +1,10 @@
 import signal_handling
 import sys
-from io_helpers import adjust_parts_of_lines
-from helpers import get_item_id, get_price_info, calculate_profit_per_hour, calculate_price_with_good_quantity
+from io_helpers import adjust_parts_of_lines, prepare_profit_variables_for_printing
+from helpers import get_item_id, get_price_info, calculate_products_per_hour, calculate_profit_per_hour, calculate_price_with_good_quantity
 from save_system import load_price_infos_from_save, load_arguments_from_save, save_arguments_to_file
 sys.path.append('../py_script_launcher_UI/')
-from UI import run_command_handler
+from UI import run_command_handler # type: ignore
 
 fruits_dict = {         # sec_per_5_fruits
     "Potato" :           30,
@@ -18,11 +18,21 @@ fruits_dict = {         # sec_per_5_fruits
     "Dragon fruit" :     180
 }
 
-def get_fruit_profits_line_parts_str_list(starting_text, fruit_price, seed_price, show_5_fruits_price=True, fill_char = " "):
-    five_fruits_price_str = f"{round(fruit_price*5):,} g/5_fruits"
-    if not show_5_fruits_price: 
-        five_fruits_price_str = "".ljust(len(five_fruits_price_str), fill_char)
-    return(starting_text, f"{round(fruit_price):,} g/fruit", five_fruits_price_str, f"{round(seed_price):,} g/seed")
+def get_fruit_profits_line_parts_str_list(starting_text, fruit_price, seed_price, show_5_fruits_price=True, fruits_per_hour=None):
+    fruit_price_str, five_fruits_price_str, seed_price_str, fruits_per_hour_str = prepare_profit_variables_for_printing((fruit_price, fruit_price*5, seed_price, fruits_per_hour))
+
+    
+    if not show_5_fruits_price:
+        five_fruits_price_str = ""
+    else:
+        five_fruits_price_str = five_fruits_price_str + " g/5_fruits"
+
+    if fruits_per_hour == None:
+        fruits_per_hour_str = ""
+    else:
+        fruits_per_hour_str = fruits_per_hour_str + " fruit/h"
+
+    return (starting_text, f"{fruit_price_str} g/fruit", five_fruits_price_str, f"{seed_price_str} g/seed", fruits_per_hour_str)
 
 def _get_price_info(id, retry_time=60):
     return get_price_info(id, retry_time=retry_time, exit_if_interrupted=signal_handling.exit_if_interrupted)
@@ -31,31 +41,32 @@ def main(cur_fruit, active_boost, change_to_save_materials):
     print(f"..................{cur_fruit.upper()}..................".ljust(140, "."))
     fruit_price_info = _get_price_info(get_item_id(cur_fruit))
     seed_price_info =  _get_price_info(get_item_id(cur_fruit + " seed"))
+    farmings_per_hour = calculate_products_per_hour(fruits_dict[cur_fruit], active_boost)
 
 
     selling_seed_price = calculate_price_with_good_quantity(seed_price_info, 'lowestSellPricesWithVolume')
     buying_fruit_price = calculate_price_with_good_quantity(fruit_price_info, 'highestBuyPricesWithVolume')
-    min_profit_per_hour = calculate_profit_per_hour(selling_seed_price, buying_fruit_price*5, fruits_dict[cur_fruit], active_boost, change_to_save_materials)
+    min_profit_per_hour = calculate_profit_per_hour(selling_seed_price, buying_fruit_price*5, farmings_per_hour, change_to_save_materials)
     line1_parts = get_fruit_profits_line_parts_str_list(f"\033[1;90mMIN estimated profit \033[1;37m{min_profit_per_hour:,}\033[1;90m g/h for instantly buying seeds and instantly selling fruits",
-                             buying_fruit_price, selling_seed_price)
+                             buying_fruit_price, selling_seed_price, fruits_per_hour=farmings_per_hour*5)
 
 
-    avg_profit_per_hour_1Day = calculate_profit_per_hour(seed_price_info['averagePrice1Day'], fruit_price_info['averagePrice1Day']*5, fruits_dict[cur_fruit], active_boost, change_to_save_materials)
+    avg_profit_per_hour_1Day = calculate_profit_per_hour(seed_price_info['averagePrice1Day'], fruit_price_info['averagePrice1Day']*5, farmings_per_hour, change_to_save_materials)
     line2_parts = get_fruit_profits_line_parts_str_list(f"\033[1;90mLast 1 Days average prices profit  \033[1;33m{avg_profit_per_hour_1Day:,}\033[1;90m g/h",
                              fruit_price_info['averagePrice1Day'], seed_price_info['averagePrice1Day'], show_5_fruits_price=False)
     
-    avg_profit_per_hour_7Days = calculate_profit_per_hour(seed_price_info['averagePrice7Days'], fruit_price_info['averagePrice7Days']*5, fruits_dict[cur_fruit], active_boost, change_to_save_materials)
+    avg_profit_per_hour_7Days = calculate_profit_per_hour(seed_price_info['averagePrice7Days'], fruit_price_info['averagePrice7Days']*5, farmings_per_hour, change_to_save_materials)
     line3_parts = get_fruit_profits_line_parts_str_list(f"\033[1;90mLast 7 Days average prices profit  \033[1;33m{avg_profit_per_hour_7Days:,}\033[1;90m g/h",
                              fruit_price_info['averagePrice7Days'], seed_price_info['averagePrice7Days'], show_5_fruits_price=False)
 
-    avg_profit_per_hour_30Days = calculate_profit_per_hour(seed_price_info['averagePrice30Days'], fruit_price_info['averagePrice30Days']*5, fruits_dict[cur_fruit], active_boost, change_to_save_materials)
+    avg_profit_per_hour_30Days = calculate_profit_per_hour(seed_price_info['averagePrice30Days'], fruit_price_info['averagePrice30Days']*5, farmings_per_hour, change_to_save_materials)
     line4_parts = get_fruit_profits_line_parts_str_list(f"\033[1;90mLast 30 Days average prices profit \033[1;33m{avg_profit_per_hour_30Days:,}\033[1;90m g/h",
                              fruit_price_info['averagePrice30Days'], seed_price_info['averagePrice30Days'], show_5_fruits_price=False)
 
 
     buying_seed_price = calculate_price_with_good_quantity(seed_price_info, 'highestBuyPricesWithVolume', 10000)
     selling_fruit_price = calculate_price_with_good_quantity(fruit_price_info, 'lowestSellPricesWithVolume', 10000)
-    max_profit_per_hour = calculate_profit_per_hour(buying_seed_price, selling_fruit_price*5, fruits_dict[cur_fruit], active_boost, change_to_save_materials)
+    max_profit_per_hour = calculate_profit_per_hour(buying_seed_price, selling_fruit_price*5, farmings_per_hour, change_to_save_materials)
     line5_parts = get_fruit_profits_line_parts_str_list(f"\033[1;90mMAX estimated profit \033[1;32m{max_profit_per_hour:,}\033[1;90m for slowly buying seeds and selling fruits throughg listings",
                              selling_fruit_price, buying_seed_price)
 
@@ -74,7 +85,11 @@ if __name__ == '__main__':
 
     product, active_boost, change_to_save_materials, use_API = run_command_handler(argument_options, _default_values)
     #product, active_boost, change_to_save_materials, use_API = "potato", 32, 20, "use API"
-    print(f"product: \"{product}\", active_boost: \"{active_boost}\", change_to_save_materials: \"{change_to_save_materials}\", use_API: \"{use_API}\"")
+    if len(sys.argv)==2 and sys.argv[1] == "ui":
+        print(f"\033[1;90myou can run this again without UI by replasing \"ui\" in the comand you used with:\033[1;37m \"{product}\" \"{active_boost}\" \"{change_to_save_materials}\" \"{use_API}\"")
+        print("\033[1;90myou are also always able to run the script with the previously used settings by using no arguments at all\033[1;37m")
+    elif len(sys.argv)==1:
+        print(f"\033[1;90myou can run this again also with using these arguments:\033[1;37m \"{product}\" \"{active_boost}\" \"{change_to_save_materials}\" \"{use_API}\"")
 
     save_arguments_to_file(activity_name="Farming", argument_list_to_save=(product, active_boost, change_to_save_materials, use_API))
 

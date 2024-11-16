@@ -18,11 +18,25 @@ def print_timer_line(lineStart, retry_timer, line_end, exit_if_interrupted=None)
         print(f"\033[1;37m{lineStart}{round(retry_timer, 1)}{line_end}  ", end="\r", flush=True)
 
 def prepare_profit_variables_for_printing(variables_list):
-    '''this will apply ":," to the numberic values, and avoids problems when some value happens to be strings instead '''
+    '''Purpose of this function is to avoid problems when some value happens to be strings instead! But it will also format the numbers nicely.\n
+    If the number is 1000 or greater, the decimals are rounded away, but if it is smaller, it is rounded so that there is 1 decimal.\n
+    And ".0" is always removed  from the end of the number.\n
+    Whis will apply ":," to the numberic values that do not have decimals(namely numbers that are greater than 1000)\n
+    '''
     str_variables = []
     for variable in variables_list:
-        str_variable = str(variable)  if  (not str(variable).lstrip("-").isdigit())  else  f"{int(variable):,}"
-        str_variables.append(str_variable.removesuffix(".0"))
+        str_variable = str(variable)
+        if isinstance(variable, float):
+            if float(str_variable.lstrip("-")) < 1000:
+                str_variable = f"{round(variable, 1)}"
+            else:
+                str_variable = f"{round(variable, 0)}"
+        
+        str_variable = str(str_variable).removesuffix(".0")
+        if str_variable.lstrip("-").isdigit():
+            str_variable = f"{int(str_variable):,}"
+
+        str_variables.append(str_variable)
     return str_variables
 
 def adjust_parts_of_lines(fragmented_lines_list, separator=" | "):

@@ -150,16 +150,24 @@ def _check_offers_from_price_info(item_name, price_info, price_types=('lowestSel
         found_types_of_orders.append(True)
     return False not in found_types_of_orders
 
-def calculate_profit_per_hour(materials_price, product_price, sec_per_product, active_boost, change_to_save_materials):
+def calculate_products_per_hour(sec_per_product, active_boost):
+    return 3600/sec_per_product * (100+active_boost)/100
+
+def _real_material_price(materials_price, change_to_save_materials):
+    if materials_price == -1: 
+        return -1
+    else:
+        return materials_price * (100-change_to_save_materials)/100
+
+def calculate_profit_per_hour(materials_price, product_price, products_per_hour, change_to_save_materials):
+    materials_price = _real_material_price(materials_price, change_to_save_materials)
     if materials_price == -1 and product_price == -1:
-        return "???"
-    products_per_hour = 3600/sec_per_product * (100+active_boost)/100
+        return f"((product_price-materials_price)*{round(products_per_hour)})"
     if materials_price == -1:
          return f"(({product_price}-materials_price)*{round(products_per_hour)})"
-    _materials_price = materials_price * (100-change_to_save_materials)/100
     if product_price == -1:
-         return f"((product_price-{round(_materials_price)})*{round(products_per_hour)})"
-    profit_per_product = product_price - _materials_price
+         return f"((product_price-{round(materials_price)})*{round(products_per_hour)})"
+    profit_per_product = product_price - materials_price
     return round(profit_per_product * products_per_hour)
 
 def calculate_price_with_good_quantity(price_info, x_PricesWithVolume, required_amount_in_gold = 50000):

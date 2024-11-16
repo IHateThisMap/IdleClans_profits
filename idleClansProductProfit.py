@@ -1,10 +1,10 @@
 import signal_handling
 import sys
 from io_helpers import prepare_profit_variables_for_printing, adjust_parts_of_lines
-from helpers import get_item_id, get_price_info, calculate_profit_per_hour, calculate_price_with_good_quantity
+from helpers import get_item_id, get_price_info, calculate_products_per_hour, calculate_profit_per_hour, calculate_price_with_good_quantity
 from save_system import load_price_infos_from_save, load_arguments_from_save, save_arguments_to_file
 sys.path.append('../py_script_launcher_UI/')
-from UI import run_command_handler
+from UI import run_command_handler # type: ignore
 
 SAVE_FOLDER = "save_folder/"
 SAVE_FILE = SAVE_FOLDER + 'icSavedPriceInfo.dictionary'
@@ -22,7 +22,7 @@ products_dict = {         #      (amount, material)                             
 def _get_price_info(id, retry_time=60):
     return get_price_info(id, retry_time=retry_time, exit_if_interrupted=signal_handling.exit_if_interrupted)
 
-def get_prices_and_profits(cur_product, material_price_type, product_price_type, active_boost, change_to_save_materials):
+def get_prices_and_profits(cur_product, material_price_type, product_price_type, products_per_hour, change_to_save_materials):
     total_material_price = 0
     for material in products_dict[cur_product][0]:
         material_price_info = _get_price_info(get_item_id(material[1]))
@@ -33,9 +33,9 @@ def get_prices_and_profits(cur_product, material_price_type, product_price_type,
             total_material_price = -1
 
     product_price_info = _get_price_info(get_item_id(cur_product))
-    product_price = calculate_price_with_good_quantity(product_price_info, product_price_type)
+    product_price = calculate_price_with_good_quantity(product_price_info, product_price_type, 10000)
 
-    profit_per_hour = calculate_profit_per_hour(total_material_price, product_price, products_dict[cur_product][1], active_boost, change_to_save_materials)
+    profit_per_hour = calculate_profit_per_hour(total_material_price, product_price, products_per_hour, change_to_save_materials)
     if product_price == -1:         product_price = "???"
     if total_material_price == -1:  total_material_price = "???"
     return prepare_profit_variables_for_printing((profit_per_hour, product_price, total_material_price))
@@ -43,11 +43,13 @@ def get_prices_and_profits(cur_product, material_price_type, product_price_type,
 def main(cur_product, active_boost=0, change_to_save_materials=0):
     print(f"\n..................{cur_product.upper()}..................")
 
-    min_profit_per_hour, buying_product_price, total_selling_material_price = get_prices_and_profits(cur_product, 'lowestSellPricesWithVolume', 'highestBuyPricesWithVolume', active_boost, change_to_save_materials)
-    max_profit_per_hour, selling_product_price, total_buying_material_price = get_prices_and_profits(cur_product, 'highestBuyPricesWithVolume', 'lowestSellPricesWithVolume', active_boost, change_to_save_materials)
+    products_per_hour = calculate_products_per_hour(products_dict[cur_product][1], active_boost)
+    min_profit_per_hour, buying_product_price, total_selling_material_price = get_prices_and_profits(cur_product, 'lowestSellPricesWithVolume', 'highestBuyPricesWithVolume', products_per_hour, change_to_save_materials)
+    max_profit_per_hour, selling_product_price, total_buying_material_price = get_prices_and_profits(cur_product, 'highestBuyPricesWithVolume', 'lowestSellPricesWithVolume', products_per_hour, change_to_save_materials)
 
-    lines = adjust_parts_of_lines(((f"\033[1;90mMIN estimated profit \033[1;37m{min_profit_per_hour}\033[1;90m g/h for instant buying and selling prices.", f"{buying_product_price} g/product",  f"{total_selling_material_price} g/materials\033[1;37m"), 
-                                   (f"\033[1;90mMAX estimated profit \033[1;32m{max_profit_per_hour}\033[1;90m g/h for slow buying and selling listings.",  f"{selling_product_price} g/product", f"{total_buying_material_price} g/materials\033[1;37m")))
+    # note that here ((g/product - g/materials) * products/h) might not be the same as the real estimated profit_per_hour because of in it we have also taken into account the change_to_save_materials !
+    lines = adjust_parts_of_lines(((f"\033[1;90mMIN estimated profit \033[1;37m{min_profit_per_hour}\033[1;90m g/h for instant buying and selling prices.", f"{buying_product_price} g/product",  f"{total_selling_material_price} g/materials", f"{round(products_per_hour, 1)} products/h\033[1;37m"), 
+                                   (f"\033[1;90mMAX estimated profit \033[1;32m{max_profit_per_hour}\033[1;90m g/h for slow buying and selling listings.",  f"{selling_product_price} g/product", f"{total_buying_material_price} g/materials", f"{round(products_per_hour, 1)} products/h\033[1;37m")))
     for l in lines:
         print(l)
 
@@ -66,7 +68,11 @@ if __name__ == '__main__':
 
     product, active_boost, change_to_save_materials, use_API = run_command_handler(argument_options, _default_values)
     #product, active_boost, change_to_save_materials, use_API = "titanium bar", 32, 20, "use API"
-    print(f"product: \"{product}\", active_boost: \"{active_boost}\", change_to_save_materials: \"{change_to_save_materials}\", use_API: \"{use_API}\"")
+    if len(sys.argv)==2 and sys.argv[1] == "ui":
+        print(f"\033[1;90myou can run this again without UI by replasing \"ui\" in the comand you used with:\033[1;37m \"{product}\" \"{active_boost}\" \"{change_to_save_materials}\" \"{use_API}\"")
+        print("\033[1;90myou are also always able to run the script with the previously used settings by using no arguments at all\033[1;37m")
+    elif len(sys.argv)==1:
+        print(f"\033[1;90myou can run this again also with using these arguments:\033[1;37m \"{product}\" \"{active_boost}\" \"{change_to_save_materials}\" \"{use_API}\"")
 
     save_arguments_to_file(activity_name="PotionsAndBars", argument_list_to_save=(product, active_boost, change_to_save_materials, use_API))
 
