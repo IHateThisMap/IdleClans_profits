@@ -1,5 +1,23 @@
 import time
 
+_color_dict = {
+	"default"		: 	"37;1",
+	"red"			: 	"31;1",
+	"green"			: 	"32;1",
+    "yellow"		:	"33;1",
+	"cyan"			: 	"36;1"
+}
+_style_dict = {
+	"default"		: 	"0",
+	"highlight"		: 	"1",
+	"fade"		    : 	"2",
+	"underscore"    : 	"4",
+    "inverted"		: 	"7",
+    "hidden"		: 	"8"
+}
+def color(color="default", style="default"):
+    return f"\x1b[{_style_dict[style]};{_color_dict[color]}m"
+
 def ask_if(question):
 	print('\007')#beep sound
 	while True:
