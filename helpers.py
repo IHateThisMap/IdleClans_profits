@@ -151,7 +151,8 @@ def _check_offers_from_price_info(item_name, price_info, price_types=('lowestSel
     return False not in found_types_of_orders
 
 def calculate_products_per_hour(sec_per_product, active_boost):
-    return 3600/sec_per_product * (100+active_boost)/100
+    _real_sec_per_product = sec_per_product * (100-active_boost)/100
+    return 3600/_real_sec_per_product
 
 def _real_material_price(materials_price, change_to_save_materials):
     if materials_price == -1: 
